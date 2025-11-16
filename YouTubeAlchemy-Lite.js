@@ -528,12 +528,19 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
     };
 
     function createIcon(iconName, size = 18) {
-        const svg = ICONS[iconName];
-        if (!svg) return '';
+        const iconData = ICONS[iconName];
+        if (!iconData) return null;
 
-        // Replace default size with custom size
-        return svg.replace(/width="\d+"/, `width="${size}"`)
-                  .replace(/height="\d+"/, `height="${size}"`);
+        // Parse SVG string and create DOM element (CSP-safe)
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(iconData, 'image/svg+xml');
+        const svgElement = svgDoc.documentElement;
+
+        // Set custom size
+        svgElement.setAttribute('width', size);
+        svgElement.setAttribute('height', size);
+
+        return svgElement;
     }
 
     function createTooltip(text) {
@@ -550,8 +557,13 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         if (id) button.id = id;
         if (className) button.className = className;
 
-        // Add icon
-        button.innerHTML = createIcon(icon);
+        // Add icon (using DOM API, not innerHTML - CSP safe)
+        if (icon) {
+            const iconElement = createIcon(icon);
+            if (iconElement) {
+                button.appendChild(iconElement);
+            }
+        }
 
         // Add tooltip
         if (tooltip) {
@@ -1164,7 +1176,9 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         // Create header
         const headerDiv = document.createElement('div');
         headerDiv.classList.add('CentAnni-tabView-header');
-        headerDiv.innerHTML = '<h3>Video Sections</h3>';
+        const h3 = document.createElement('h3');
+        h3.textContent = 'Video Sections';
+        headerDiv.appendChild(h3);
         tabViewDiv.appendChild(headerDiv);
 
         // Create subheader (tabs)
@@ -1232,7 +1246,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         tabViewDiv.insertBefore(subheaderDiv, tabViewDiv.children[1]);
 
         // Replace secondary with tab view
-        secondary.innerHTML = '';
+        secondary.textContent = '';
         secondary.appendChild(tabViewDiv);
 
         // Activate first tab
