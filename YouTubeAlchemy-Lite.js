@@ -171,34 +171,58 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         /* ===== TRANSCRIPT EXPORT BUTTONS ===== */
         .CentAnni-button-wrapper {
             display: inline-flex;
-            position: relative;
+            align-items: center;
+            gap: 4px;
+            margin-right: 8px;
         }
 
         .CentAnni-button-wrapper button {
-            padding: 8px 12px;
-            margin: 0 4px;
+            padding: 6px 10px;
             cursor: pointer;
-            background-color: hsl(0, 0%, 7%);
-            color: whitesmoke;
-            border: 1px solid hsl(0, 0%, 18.82%);
-            border-radius: 4px;
+            background-color: transparent;
+            color: var(--yt-spec-text-primary, #f1f1f1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 18px;
             font-family: "Roboto", "Arial", sans-serif;
             font-size: 14px;
+            font-weight: 500;
             transition: all .2s ease-out;
+            white-space: nowrap;
         }
 
         .CentAnni-button-wrapper button:hover {
-            background-color: hsl(0, 0%, 25%);
-            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .CentAnni-button-wrapper button:active {
+            background-color: rgba(255, 255, 255, 0.2);
         }
 
         #transcript-lazy-button {
             background-color: hsl(51, 100%, 50%);
-            color: black;
+            color: #000;
+            border-color: hsl(51, 100%, 50%);
         }
 
         #transcript-lazy-button:hover {
             background-color: hsl(51, 100%, 60%);
+            border-color: hsl(51, 100%, 60%);
+        }
+
+        /* Dark mode adjustments */
+        html[dark] .CentAnni-button-wrapper button {
+            color: #f1f1f1;
+        }
+
+        html:not([dark]) .CentAnni-button-wrapper button {
+            color: #030303;
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        html:not([dark]) .CentAnni-button-wrapper button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.2);
         }
 
         .transcript-preload {
@@ -478,35 +502,24 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
     async function createTranscriptButtons() {
         if (!USER_CONFIG.YouTubeTranscriptExporter) return;
 
-        const watchFlexy = document.querySelector('ytd-watch-flexy');
-        if (!watchFlexy) return;
+        // Remove existing buttons
+        document.querySelectorAll('.CentAnni-button-wrapper').forEach(el => el.remove());
 
-        // Check if transcript panel exists
-        const transcriptPanel = watchFlexy.querySelector(
-            'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]'
-        );
-        if (!transcriptPanel) return;
+        // Find where to place buttons (masthead end or guide header)
+        const mastheadEnd = document.querySelector('#masthead #end');
+        const guideHeader = document.querySelector('#guide #guide-content > #header');
+        const targetContainer = mastheadEnd || guideHeader;
 
-        // Find where to place buttons (guide or secondary)
-        const guideWrapper = document.getElementById('guide-wrapper');
-        const secondary = document.getElementById('secondary');
-        const targetContainer = guideWrapper || secondary;
-        if (!targetContainer) return;
+        if (!targetContainer) {
+            // Wait for masthead to load
+            setTimeout(createTranscriptButtons, 1000);
+            return;
+        }
 
         // Create button container
         const buttonWrapper = document.createElement('div');
         buttonWrapper.classList.add('CentAnni-button-wrapper');
         buttonWrapper.id = 'transcript-button-container';
-
-        // Lazy load button (if enabled)
-        if (USER_CONFIG.lazyTranscriptLoading) {
-            const lazyBtn = document.createElement('button');
-            lazyBtn.id = 'transcript-lazy-button';
-            lazyBtn.textContent = USER_CONFIG.buttonIcons.lazyLoad || '📜';
-            lazyBtn.title = 'Load Transcript';
-            lazyBtn.addEventListener('click', loadTranscript);
-            buttonWrapper.appendChild(lazyBtn);
-        }
 
         // Download button
         const downloadBtn = document.createElement('button');
@@ -544,12 +557,18 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             buttonWrapper.appendChild(notebookBtn);
         }
 
-        // Append to target
-        if (guideWrapper) {
-            guideWrapper.prepend(buttonWrapper);
-        } else {
-            secondary.prepend(buttonWrapper);
+        // Lazy load button (if enabled) - placed at the end
+        if (USER_CONFIG.lazyTranscriptLoading) {
+            const lazyBtn = document.createElement('button');
+            lazyBtn.id = 'transcript-lazy-button';
+            lazyBtn.textContent = USER_CONFIG.buttonIcons.lazyLoad || '📜';
+            lazyBtn.title = 'Load Transcript';
+            lazyBtn.addEventListener('click', loadTranscript);
+            buttonWrapper.appendChild(lazyBtn);
         }
+
+        // Append to masthead (right side of top nav bar)
+        targetContainer.prepend(buttonWrapper);
     }
 
     function loadTranscript() {
@@ -564,14 +583,33 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         }
     }
 
+    function checkTranscriptAvailable() {
+        // Check if "Show transcript" button exists
+        const transcriptButton = document.querySelector('#button-container button[aria-label="Show transcript"]');
+        const transcriptSection = document.querySelector('ytd-video-description-transcript-section-renderer');
+
+        if (!transcriptButton && !transcriptSection) {
+            throw new Error('Transcript unavailable. This video may not have subtitles/captions, or the language is unsupported.');
+        }
+
+        // Check if transcript is loaded
+        const transcriptItems = document.querySelectorAll('ytd-transcript-segment-list-renderer ytd-transcript-segment-renderer');
+        if (transcriptItems.length === 0) {
+            throw new Error('Transcript not loaded. Please open the transcript panel first.');
+        }
+    }
+
     function getTranscriptText() {
+        // First check if transcript is available
+        checkTranscriptAvailable();
+
         const watchFlexy = document.querySelector('ytd-watch-flexy');
         const segmentsContainer = watchFlexy?.querySelector(
             'ytd-transcript-segment-list-renderer #segments-container'
         );
 
         if (!segmentsContainer) {
-            throw new Error('Transcript not loaded');
+            throw new Error('Transcript not loaded. Please open the transcript panel first.');
         }
 
         const segments = segmentsContainer.children;
