@@ -3,7 +3,7 @@
 // @description  Simplified YouTube enhancement: transcript export, playback speed control, and tab view layout. Stripped down from 200+ features to just the essentials.
 // @author       Simplified by Claude (Based on Tim Macy's YouTube Alchemy)
 // @license      AGPL-3.0-or-later
-// @version      1.0.0
+// @version      1.0.1
 // @namespace    YouTubeAlchemyLite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @match        https://*.youtube.com/*
@@ -459,6 +459,9 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
         const notification = document.createElement('div');
         notification.classList.add('CentAnni-notification');
+
+        // Support multiline messages
+        notification.style.whiteSpace = 'pre-line';
         notification.textContent = message;
 
         overlay.appendChild(notification);
@@ -499,6 +502,60 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
     // ==================== FEATURE 1: TRANSCRIPT EXPORT ====================
 
+    // Auto-load transcript in background
+    async function preloadTranscript() {
+        const watchFlexy = document.querySelector('ytd-watch-flexy');
+        if (!watchFlexy) return false;
+
+        const transcriptPanel = watchFlexy.querySelector(
+            'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]'
+        );
+
+        if (!transcriptPanel) return false;
+
+        // Check if transcript is already loaded
+        const segmentsContainer = transcriptPanel.querySelector('ytd-transcript-segment-list-renderer #segments-container');
+        const firstItem = segmentsContainer?.querySelector('ytd-transcript-segment-renderer');
+        if (segmentsContainer && firstItem) {
+            return true; // Already loaded
+        }
+
+        // Auto-open transcript panel to trigger loading
+        const isClosed = transcriptPanel.getAttribute('visibility') === 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN';
+        if (isClosed) {
+            transcriptPanel.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
+
+            // Wait for transcript to load
+            return new Promise((resolve) => {
+                const observer = new MutationObserver(() => {
+                    const items = transcriptPanel.querySelectorAll('ytd-transcript-segment-renderer');
+                    if (items.length > 0) {
+                        observer.disconnect();
+                        // Close panel after loading (user didn't manually open it)
+                        transcriptPanel.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
+                        resolve(true);
+                    }
+                });
+
+                observer.observe(transcriptPanel, {
+                    childList: true,
+                    subtree: true
+                });
+
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    observer.disconnect();
+                    if (isClosed) {
+                        transcriptPanel.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
+                    }
+                    resolve(false);
+                }, 10000);
+            });
+        }
+
+        return false;
+    }
+
     async function createTranscriptButtons() {
         if (!USER_CONFIG.YouTubeTranscriptExporter) return;
 
@@ -514,6 +571,13 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             // Wait for masthead to load
             setTimeout(createTranscriptButtons, 1000);
             return;
+        }
+
+        // Try to preload transcript in background
+        if (!USER_CONFIG.lazyTranscriptLoading) {
+            preloadTranscript().catch(() => {
+                // Ignore errors, buttons will still work if user manually opens transcript
+            });
         }
 
         // Create button container
@@ -589,13 +653,13 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         const transcriptSection = document.querySelector('ytd-video-description-transcript-section-renderer');
 
         if (!transcriptButton && !transcriptSection) {
-            throw new Error('Transcript unavailable. This video may not have subtitles/captions, or the language is unsupported.');
+            throw new Error('Transcript unavailable.\nThis video may not have subtitles/captions.');
         }
 
         // Check if transcript is loaded
         const transcriptItems = document.querySelectorAll('ytd-transcript-segment-list-renderer ytd-transcript-segment-renderer');
         if (transcriptItems.length === 0) {
-            throw new Error('Transcript not loaded. Please open the transcript panel first.');
+            throw new Error('Transcript has not loaded.\nPlease try clicking the "Show transcript" button below the video.');
         }
     }
 
@@ -694,7 +758,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
             showNotification('Transcript downloaded!');
         } catch (error) {
-            showNotification('Error: ' + error.message);
+            showNotification(error.message, 3000);
             console.error('Download error:', error);
         }
     }
@@ -709,7 +773,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             await navigator.clipboard.writeText(content);
             showNotification('Transcript copied to clipboard!');
         } catch (error) {
-            showNotification('Error: ' + error.message);
+            showNotification(error.message, 3000);
             console.error('Copy error:', error);
         }
     }
@@ -729,7 +793,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
             showNotification('Transcript copied! Opening ChatGPT...');
         } catch (error) {
-            showNotification('Error: ' + error.message);
+            showNotification(error.message, 3000);
             console.error('ChatGPT error:', error);
         }
     }
@@ -748,7 +812,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
             showNotification('Transcript copied! Opening NotebookLM...');
         } catch (error) {
-            showNotification('Error: ' + error.message);
+            showNotification(error.message, 3000);
             console.error('NotebookLM error:', error);
         }
     }
@@ -1143,5 +1207,5 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         }
     }
 
-    console.log('YouTube Alchemy Lite v1.0.0 loaded');
+    console.log('YouTube Alchemy Lite v1.0.1 loaded');
 })();
