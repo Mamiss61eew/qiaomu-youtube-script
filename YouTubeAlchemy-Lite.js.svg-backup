@@ -188,10 +188,15 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 18px;
             font-family: "Roboto", "Arial", sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             transition: all .15s cubic-bezier(0.05, 0, 0, 1);
             white-space: nowrap;
+        }
+
+        .CentAnni-button-wrapper button svg {
+            display: block;
+            flex-shrink: 0;
         }
 
         .CentAnni-button-wrapper button:hover {
@@ -504,7 +509,42 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
     applyCSSClasses();
 
-    // ==================== HELPER FUNCTIONS ====================
+    // ==================== SVG ICONS (Lucide Icons - MIT License) ====================
+
+    const ICONS = {
+        download: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+
+        copy: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+
+        messageSquare: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+
+        bookOpen: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+
+        minus: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+
+        plus: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+
+        scroll: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><line x1="12" y1="20" x2="12" y2="10"/><polyline points="8 14 12 10 16 14"/></svg>`
+    };
+
+    function createIcon(iconName, size = 18) {
+        const iconData = ICONS[iconName];
+        if (!iconData) return null;
+
+        // Use <template> innerHTML to bypass Trusted Types CSP
+        // template.innerHTML is exempt from CSP restrictions
+        const template = document.createElement('template');
+        template.innerHTML = iconData;
+        const svgElement = template.content.firstElementChild;
+
+        if (!svgElement) return null;
+
+        // Set custom size
+        svgElement.setAttribute('width', size);
+        svgElement.setAttribute('height', size);
+
+        return svgElement;
+    }
 
     function createTooltip(text) {
         const tooltip = document.createElement('span');
@@ -514,21 +554,26 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
     }
 
     function createButton(config) {
-        const { id, text, tooltip, onClick, className = '' } = config;
+        const { id, icon, tooltip, onClick, className = '' } = config;
 
         const button = document.createElement('button');
         if (id) button.id = id;
         if (className) button.className = className;
 
-        // Use textContent - only CSP-safe method
-        if (text) {
-            button.textContent = text;
+        // Add icon (using DOM API, not innerHTML - CSP safe)
+        if (icon) {
+            const iconElement = createIcon(icon);
+            if (iconElement) {
+                button.appendChild(iconElement);
+            }
         }
 
+        // Add tooltip
         if (tooltip) {
             button.appendChild(createTooltip(tooltip));
         }
 
+        // Add click handler
         if (onClick) {
             button.addEventListener('click', onClick);
         }
@@ -673,7 +718,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         // Download button
         const downloadBtn = createButton({
             id: 'transcript-download-button',
-            text: '↓',
+            icon: 'download',
             tooltip: 'Download Transcript',
             onClick: () => downloadTranscript()
         });
@@ -682,7 +727,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         // Copy button
         const copyBtn = createButton({
             id: 'transcript-copy-button',
-            text: '📋',
+            icon: 'copy',
             tooltip: 'Copy to Clipboard',
             onClick: () => copyTranscript()
         });
@@ -692,7 +737,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         if (USER_CONFIG.targetChatGPTUrl) {
             const chatGPTBtn = createButton({
                 id: 'transcript-ChatGPT-button',
-                text: '💬',
+                icon: 'messageSquare',
                 tooltip: `Send to ${USER_CONFIG.targetChatGPTLabel || 'ChatGPT'}`,
                 onClick: () => sendToChatGPT()
             });
@@ -703,7 +748,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         if (USER_CONFIG.targetNotebookLMUrl) {
             const notebookBtn = createButton({
                 id: 'transcript-NotebookLM-button',
-                text: '🎧',
+                icon: 'bookOpen',
                 tooltip: `Send to ${USER_CONFIG.targetNotebookLMLabel || 'NotebookLM'}`,
                 onClick: () => sendToNotebookLM()
             });
@@ -714,7 +759,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         if (USER_CONFIG.lazyTranscriptLoading) {
             const lazyBtn = createButton({
                 id: 'transcript-lazy-button',
-                text: '📜',
+                icon: 'scroll',
                 tooltip: 'Load Transcript',
                 onClick: loadTranscript
             });
@@ -960,7 +1005,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         controlDiv.classList.add('CentAnni-playback-control');
 
         const minusBtn = createButton({
-            text: '−',
+            icon: 'minus',
             tooltip: 'Decrease speed (a)',
             onClick: () => setSpeed(video.playbackRate - 0.25)
         });
@@ -976,7 +1021,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         speedDisplay.appendChild(speedTooltip);
 
         const plusBtn = createButton({
-            text: '+',
+            icon: 'plus',
             tooltip: 'Increase speed (d)',
             onClick: () => setSpeed(video.playbackRate + 0.25)
         });
