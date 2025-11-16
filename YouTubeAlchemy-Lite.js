@@ -3,7 +3,7 @@
 // @description  Simplified YouTube enhancement: transcript export, playback speed control, and tab view layout. Stripped down from 200+ features to just the essentials.
 // @author       Simplified by Claude (Based on Tim Macy's YouTube Alchemy)
 // @license      AGPL-3.0-or-later
-// @version      1.0.1
+// @version      1.1.0
 // @namespace    YouTubeAlchemyLite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @match        https://*.youtube.com/*
@@ -65,7 +65,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
         // Playback Speed Control
         playbackSpeed: true,
-        playbackSpeedBtns: false,
+        playbackSpeedBtns: true,  // Changed: default to true, show common presets
         playbackSpeedValue: 1,
         playbackSpeedToggle: 's',
         playbackSpeedDecrease: 'a',
@@ -172,31 +172,42 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         .CentAnni-button-wrapper {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
             margin-right: 8px;
         }
 
         .CentAnni-button-wrapper button {
-            padding: 6px 10px;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
             cursor: pointer;
             background-color: transparent;
             color: var(--yt-spec-text-primary, #f1f1f1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 18px;
             font-family: "Roboto", "Arial", sans-serif;
             font-size: 14px;
             font-weight: 500;
-            transition: all .2s ease-out;
+            transition: all .15s cubic-bezier(0.05, 0, 0, 1);
             white-space: nowrap;
+        }
+
+        .CentAnni-button-wrapper button svg {
+            display: block;
+            flex-shrink: 0;
         }
 
         .CentAnni-button-wrapper button:hover {
             background-color: rgba(255, 255, 255, 0.1);
             border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
         }
 
         .CentAnni-button-wrapper button:active {
-            background-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(0);
         }
 
         #transcript-lazy-button {
@@ -223,6 +234,53 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         html:not([dark]) .CentAnni-button-wrapper button:hover {
             background-color: rgba(0, 0, 0, 0.05);
             border-color: rgba(0, 0, 0, 0.2);
+        }
+
+        /* ===== TOOLTIP SYSTEM ===== */
+        .CentAnni-tooltip {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 10px;
+            background-color: rgba(28, 28, 28, 0.95);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.4;
+            white-space: nowrap;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .2s, visibility .2s;
+            z-index: 10000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .CentAnni-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(28, 28, 28, 0.95);
+        }
+
+        button:hover .CentAnni-tooltip,
+        span:hover .CentAnni-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        html:not([dark]) .CentAnni-tooltip {
+            background-color: rgba(240, 240, 240, 0.98);
+            color: #030303;
+        }
+
+        html:not([dark]) .CentAnni-tooltip::after {
+            border-top-color: rgba(240, 240, 240, 0.98);
         }
 
         .transcript-preload {
@@ -451,6 +509,63 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
     applyCSSClasses();
 
+    // ==================== SVG ICONS (Lucide Icons - MIT License) ====================
+
+    const ICONS = {
+        download: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+
+        copy: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+
+        messageSquare: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+
+        bookOpen: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+
+        minus: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+
+        plus: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+
+        scroll: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><line x1="12" y1="20" x2="12" y2="10"/><polyline points="8 14 12 10 16 14"/></svg>`
+    };
+
+    function createIcon(iconName, size = 18) {
+        const svg = ICONS[iconName];
+        if (!svg) return '';
+
+        // Replace default size with custom size
+        return svg.replace(/width="\d+"/, `width="${size}"`)
+                  .replace(/height="\d+"/, `height="${size}"`);
+    }
+
+    function createTooltip(text) {
+        const tooltip = document.createElement('span');
+        tooltip.classList.add('CentAnni-tooltip');
+        tooltip.textContent = text;
+        return tooltip;
+    }
+
+    function createButton(config) {
+        const { id, icon, tooltip, onClick, className = '' } = config;
+
+        const button = document.createElement('button');
+        if (id) button.id = id;
+        if (className) button.className = className;
+
+        // Add icon
+        button.innerHTML = createIcon(icon);
+
+        // Add tooltip
+        if (tooltip) {
+            button.appendChild(createTooltip(tooltip));
+        }
+
+        // Add click handler
+        if (onClick) {
+            button.addEventListener('click', onClick);
+        }
+
+        return button;
+    }
+
     // ==================== UTILITY FUNCTIONS ====================
 
     function showNotification(message, duration = 2000) {
@@ -586,48 +701,53 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         buttonWrapper.id = 'transcript-button-container';
 
         // Download button
-        const downloadBtn = document.createElement('button');
-        downloadBtn.id = 'transcript-download-button';
-        downloadBtn.textContent = USER_CONFIG.buttonIcons.download || '↓';
-        downloadBtn.title = 'Download Transcript';
-        downloadBtn.addEventListener('click', () => downloadTranscript());
+        const downloadBtn = createButton({
+            id: 'transcript-download-button',
+            icon: 'download',
+            tooltip: 'Download Transcript',
+            onClick: () => downloadTranscript()
+        });
         buttonWrapper.appendChild(downloadBtn);
 
         // Copy button
-        const copyBtn = document.createElement('button');
-        copyBtn.id = 'transcript-copy-button';
-        copyBtn.textContent = USER_CONFIG.buttonIcons.copy || '📋';
-        copyBtn.title = 'Copy Transcript';
-        copyBtn.addEventListener('click', () => copyTranscript());
+        const copyBtn = createButton({
+            id: 'transcript-copy-button',
+            icon: 'copy',
+            tooltip: 'Copy to Clipboard',
+            onClick: () => copyTranscript()
+        });
         buttonWrapper.appendChild(copyBtn);
 
         // ChatGPT button
         if (USER_CONFIG.targetChatGPTUrl) {
-            const chatGPTBtn = document.createElement('button');
-            chatGPTBtn.id = 'transcript-ChatGPT-button';
-            chatGPTBtn.textContent = USER_CONFIG.buttonIcons.ChatGPT || '💬';
-            chatGPTBtn.title = 'Send to ' + (USER_CONFIG.targetChatGPTLabel || 'ChatGPT');
-            chatGPTBtn.addEventListener('click', () => sendToChatGPT());
+            const chatGPTBtn = createButton({
+                id: 'transcript-ChatGPT-button',
+                icon: 'messageSquare',
+                tooltip: `Send to ${USER_CONFIG.targetChatGPTLabel || 'ChatGPT'}`,
+                onClick: () => sendToChatGPT()
+            });
             buttonWrapper.appendChild(chatGPTBtn);
         }
 
         // NotebookLM button
         if (USER_CONFIG.targetNotebookLMUrl) {
-            const notebookBtn = document.createElement('button');
-            notebookBtn.id = 'transcript-NotebookLM-button';
-            notebookBtn.textContent = USER_CONFIG.buttonIcons.NotebookLM || '🎧';
-            notebookBtn.title = 'Send to ' + (USER_CONFIG.targetNotebookLMLabel || 'NotebookLM');
-            notebookBtn.addEventListener('click', () => sendToNotebookLM());
+            const notebookBtn = createButton({
+                id: 'transcript-NotebookLM-button',
+                icon: 'bookOpen',
+                tooltip: `Send to ${USER_CONFIG.targetNotebookLMLabel || 'NotebookLM'}`,
+                onClick: () => sendToNotebookLM()
+            });
             buttonWrapper.appendChild(notebookBtn);
         }
 
         // Lazy load button (if enabled) - placed at the end
         if (USER_CONFIG.lazyTranscriptLoading) {
-            const lazyBtn = document.createElement('button');
-            lazyBtn.id = 'transcript-lazy-button';
-            lazyBtn.textContent = USER_CONFIG.buttonIcons.lazyLoad || '📜';
-            lazyBtn.title = 'Load Transcript';
-            lazyBtn.addEventListener('click', loadTranscript);
+            const lazyBtn = createButton({
+                id: 'transcript-lazy-button',
+                icon: 'scroll',
+                tooltip: 'Load Transcript',
+                onClick: loadTranscript
+            });
             buttonWrapper.appendChild(lazyBtn);
         }
 
@@ -869,20 +989,26 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         controlDiv.id = 'CentAnni-playback-speed-control';
         controlDiv.classList.add('CentAnni-playback-control');
 
-        const minusBtn = document.createElement('button');
-        minusBtn.textContent = '-';
-        minusBtn.addEventListener('click', () => {
-            setSpeed(video.playbackRate - 0.25);
+        const minusBtn = createButton({
+            icon: 'minus',
+            tooltip: 'Decrease speed (a)',
+            onClick: () => setSpeed(video.playbackRate - 0.25)
         });
 
         const speedDisplay = document.createElement('span');
         speedDisplay.id = 'CentAnni-speed-display';
         speedDisplay.textContent = `${video.playbackRate.toFixed(2)}x`;
 
-        const plusBtn = document.createElement('button');
-        plusBtn.textContent = '+';
-        plusBtn.addEventListener('click', () => {
-            setSpeed(video.playbackRate + 0.25);
+        // Add tooltip to speed display
+        const speedTooltip = createTooltip('s: Toggle 1x | a: - | d: +');
+        speedDisplay.style.position = 'relative';
+        speedDisplay.style.cursor = 'help';
+        speedDisplay.appendChild(speedTooltip);
+
+        const plusBtn = createButton({
+            icon: 'plus',
+            tooltip: 'Increase speed (d)',
+            onClick: () => setSpeed(video.playbackRate + 0.25)
         });
 
         controlDiv.appendChild(minusBtn);
@@ -974,7 +1100,8 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
     }
 
     function createSpeedPresetButtons(video, setSpeed) {
-        const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4];
+        // Only show most commonly used speeds (not all 16)
+        const speeds = [1, 1.25, 1.5, 2, 3];
 
         const container = document.createElement('div');
         container.id = 'CentAnni-speed-buttons';
@@ -1207,5 +1334,5 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         }
     }
 
-    console.log('YouTube Alchemy Lite v1.0.1 loaded');
+    console.log('YouTube Alchemy Lite v1.1.0 loaded');
 })();
