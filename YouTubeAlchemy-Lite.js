@@ -3,7 +3,7 @@
 // @description  Simplified YouTube enhancement: transcript export, playback speed control, tab view layout, and comment export. Stripped down from 200+ features to just the essentials.
 // @author       向阳乔木 (https://x.com/vista8)
 // @license      AGPL-3.0-or-later
-// @version      1.1.0
+// @version      1.2.0
 // @namespace    YouTubeAlchemyLite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @match        https://*.youtube.com/*
@@ -298,6 +298,21 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             text-align: center;
             color: white;
             font-weight: 500;
+        }
+
+        .CentAnni-speed-preset {
+            font-size: 13px !important;
+            padding: 4px 10px !important;
+            background-color: hsl(210, 100%, 40%) !important;
+            border-color: hsl(210, 100%, 50%) !important;
+        }
+
+        .CentAnni-speed-preset:hover {
+            background-color: hsl(210, 100%, 50%) !important;
+        }
+
+        .CentAnni-author-link {
+            color: inherit !important;
         }
 
         #CentAnni-speed-buttons {
@@ -888,9 +903,56 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             setSpeed(video.playbackRate + 0.25);
         });
 
+        // Quick speed presets: 1.5x and 2x
+        const speed15Btn = document.createElement('button');
+        speed15Btn.textContent = '1.5x';
+        speed15Btn.classList.add('CentAnni-speed-preset');
+        speed15Btn.title = 'Set speed to 1.5x';
+        speed15Btn.addEventListener('click', () => {
+            setSpeed(1.5);
+        });
+
+        const speed2Btn = document.createElement('button');
+        speed2Btn.textContent = '2x';
+        speed2Btn.classList.add('CentAnni-speed-preset');
+        speed2Btn.title = 'Set speed to 2x';
+        speed2Btn.addEventListener('click', () => {
+            setSpeed(2);
+        });
+
+        // Author link button
+        const authorBtn = document.createElement('a');
+        authorBtn.textContent = '🌲';
+        authorBtn.href = 'https://x.com/vista8';
+        authorBtn.target = '_blank';
+        authorBtn.rel = 'noopener noreferrer';
+        authorBtn.classList.add('CentAnni-author-link');
+        authorBtn.title = 'Follow @vista8 on X';
+        authorBtn.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            margin-left: 8px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        `;
+        authorBtn.addEventListener('mouseenter', () => {
+            authorBtn.style.opacity = '1';
+        });
+        authorBtn.addEventListener('mouseleave', () => {
+            authorBtn.style.opacity = '0.7';
+        });
+
         controlDiv.appendChild(minusBtn);
         controlDiv.appendChild(speedDisplay);
         controlDiv.appendChild(plusBtn);
+        controlDiv.appendChild(speed15Btn);
+        controlDiv.appendChild(speed2Btn);
+        controlDiv.appendChild(authorBtn);
         menuRenderer.prepend(controlDiv);
 
         // Create preset speed buttons (if enabled)
@@ -1321,5 +1383,5 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         }
     }
 
-    console.log('YouTube Alchemy Lite v1.1.0 loaded');
+    console.log('YouTube Alchemy Lite v1.2.0 loaded');
 })();
