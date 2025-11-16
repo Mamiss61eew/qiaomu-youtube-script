@@ -3,7 +3,7 @@
 // @description  Essential YouTube enhancements by 向阳乔木: transcript export, playback speed control, tab view layout, and comment export.
 // @author       向阳乔木 (https://x.com/vista8)
 // @license      AGPL-3.0-or-later
-// @version      1.4.0
+// @version      1.5.0
 // @namespace    QiaomuYouTubeScript
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @match        https://*.youtube.com/*
@@ -139,6 +139,33 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         }
     }
 
+    // ==================== TOAST NOTIFICATIONS ====================
+
+    function showToast(message, type = 'info', duration = 2500) {
+        // Remove existing toast if any
+        const existingToast = document.querySelector('.CentAnni-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `CentAnni-toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+            toast.classList.add('active');
+        });
+
+        // Auto remove
+        setTimeout(() => {
+            toast.classList.remove('active');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
     // ==================== CSS STYLES ====================
 
     const styleSheet = document.createElement('style');
@@ -263,6 +290,45 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
         #CentAnni-playback-speed-popup.active {
             opacity: 1;
+        }
+
+        /* ===== TOAST NOTIFICATIONS ===== */
+        .CentAnni-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(28, 28, 28, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px 18px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: "Roboto", "Arial", sans-serif;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10000;
+            max-width: 350px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .CentAnni-toast.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .CentAnni-toast.success {
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .CentAnni-toast.error {
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .CentAnni-toast.info {
+            border-color: rgba(59, 130, 246, 0.3);
         }
 
         .CentAnni-playback-control {
@@ -722,7 +788,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
         if (transcriptPanel) {
             transcriptPanel.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
-            showNotification('Loading transcript...');
+            // Silent loading - no notification needed
         }
     }
 
@@ -835,9 +901,9 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            showNotification('Transcript downloaded!');
+            showToast('已下载字幕', 'success');
         } catch (error) {
-            showNotification(error.message, 3000);
+            showToast(error.message.includes('Transcript unavailable') ? '没有找到字幕' : '下载失败', 'error');
             console.error('Download error:', error);
         }
     }
@@ -850,9 +916,9 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             const content = `Title: ${title}\nChannel: ${channelName}\nURL: ${window.location.href}\n\n${transcriptText}`;
 
             await navigator.clipboard.writeText(content);
-            showNotification('Transcript copied to clipboard!');
+            showToast('已复制字幕', 'success');
         } catch (error) {
-            showNotification(error.message, 3000);
+            showToast(error.message.includes('Transcript unavailable') ? '没有找到字幕' : '复制失败', 'error');
             console.error('Copy error:', error);
         }
     }
@@ -870,9 +936,9 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             const targetUrl = USER_CONFIG.targetChatGPTUrl || 'https://ChatGPT.com/';
             window.open(targetUrl, USER_CONFIG.openSameTab ? '_self' : '_blank');
 
-            showNotification('Transcript copied! Opening ChatGPT...');
+            showToast('已复制并打开ChatGPT', 'success');
         } catch (error) {
-            showNotification(error.message, 3000);
+            showToast(error.message.includes('Transcript unavailable') ? '没有找到字幕' : '操作失败', 'error');
             console.error('ChatGPT error:', error);
         }
     }
@@ -889,9 +955,9 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             const targetUrl = USER_CONFIG.targetNotebookLMUrl || 'https://NotebookLM.Google.com/';
             window.open(targetUrl, USER_CONFIG.openSameTab ? '_self' : '_blank');
 
-            showNotification('Transcript copied! Opening NotebookLM...');
+            showToast('已复制并打开NotebookLM', 'success');
         } catch (error) {
-            showNotification(error.message, 3000);
+            showToast(error.message.includes('Transcript unavailable') ? '没有找到字幕' : '操作失败', 'error');
             console.error('NotebookLM error:', error);
         }
     }
@@ -990,7 +1056,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             try {
                 const transcriptText = getTranscriptText();
                 if (!transcriptText) {
-                    alert('Transcript not available. Please wait for it to load or enable transcript first.');
+                    showToast('没有找到字幕', 'error');
                     return;
                 }
 
@@ -1005,9 +1071,11 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                     copyTranscriptBtn.textContent = originalText;
                     copyTranscriptBtn.style.color = '';
                 }, 1500);
+
+                showToast('已复制字幕', 'success', 1500);
             } catch (error) {
                 console.error('Failed to copy transcript:', error);
-                alert('Failed to copy transcript: ' + error.message);
+                showToast('复制失败', 'error');
             }
         });
 
@@ -1341,7 +1409,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                 const commentThreads = commentsSection.querySelectorAll('ytd-comment-thread-renderer');
 
                 if (commentThreads.length === 0) {
-                    alert('No comments found');
+                    showToast('没有找到评论', 'error');
                     return;
                 }
 
@@ -1391,9 +1459,11 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                     copyBtn.style.color = 'var(--yt-spec-text-secondary)';
                 }, 2000);
 
+                showToast(`已复制 ${commentCount} 条评论`, 'success', 2000);
+
             } catch (error) {
                 console.error('Failed to copy comments:', error);
-                alert('Failed to copy comments: ' + error.message);
+                showToast('复制失败', 'error');
             }
         });
 
@@ -1457,5 +1527,5 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         }
     }
 
-    console.log('Qiaomu\'s YouTube Script v1.4.0 loaded');
+    console.log('Qiaomu\'s YouTube Script v1.5.0 loaded');
 })();
