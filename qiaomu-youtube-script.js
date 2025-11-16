@@ -9,8 +9,6 @@
 // @match        https://*.youtube.com/*
 // @grant        GM.setValue
 // @grant        GM.getValue
-// @grant        GM.xmlHttpRequest
-// @connect      youtube.com
 // @run-at       document-start
 // @noframes
 // @homepageURL  https://www.qiaomu.ai/
@@ -1367,29 +1365,10 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
     // Helper: Get ytInitialData from page
     function getYtInitialData() {
-        try {
-            if (window.ytInitialData) {
-                return window.ytInitialData;
-            }
-
-            // Fallback: extract from script tags
-            const scripts = document.getElementsByTagName('script');
-            for (let script of scripts) {
-                const content = script.textContent;
-                if (content.includes('var ytInitialData')) {
-                    const match = content.match(/var ytInitialData = ({.*?});/s);
-                    if (match) {
-                        return JSON.parse(match[1]);
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('Failed to get ytInitialData:', e);
-        }
-        return null;
+        return window.ytInitialData || null;
     }
 
-    // Helper: Extract continuation token from ytInitialData
+    // Helper: Extract continuation token
     function getContinuationToken(data) {
         try {
             const contents = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
@@ -1397,12 +1376,12 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
             for (let content of contents) {
                 if (content.itemSectionRenderer?.sectionIdentifier === 'comment-item-section') {
-                    const continuation = content.itemSectionRenderer.contents[0]?.continuationItemRenderer;
-                    return continuation?.continuationEndpoint?.continuationCommand?.token;
+                    return content.itemSectionRenderer.contents[0]?.continuationItemRenderer
+                        ?.continuationEndpoint?.continuationCommand?.token;
                 }
             }
         } catch (e) {
-            console.error('Failed to extract continuation token:', e);
+            console.error('提取token失败:', e);
         }
         return null;
     }
@@ -1415,95 +1394,84 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             try {
                 if (item.commentThreadRenderer) {
                     const thread = item.commentThreadRenderer;
-                    const comment = thread.comment.commentRenderer;
+                    const commentRenderer = thread.comment.commentRenderer;
 
-                    // Main comment
-                    const commentData = {
-                        author: comment.authorText?.simpleText || '',
-                        authorChannel: comment.authorEndpoint?.browseEndpoint?.browseId || '',
-                        text: comment.contentText?.runs?.map(r => r.text).join('') || '',
-                        likeCount: comment.voteCount?.simpleText || '0',
-                        publishedTime: comment.publishedTimeText?.runs?.[0]?.text || '',
+                    const comment = {
+                        author: commentRenderer.authorText?.simpleText || '',
+                        text: commentRenderer.contentText?.runs?.map(r => r.text).join('') || '',
                         replies: []
                     };
 
-                    // Replies
+                    // Parse replies
                     if (thread.replies?.commentRepliesRenderer) {
                         const replies = thread.replies.commentRepliesRenderer.contents;
-                        for (let reply of replies) {
-                            if (reply.commentRenderer) {
-                                const r = reply.commentRenderer;
-                                commentData.replies.push({
+                        for (let replyItem of replies) {
+                            if (replyItem.commentRenderer) {
+                                const r = replyItem.commentRenderer;
+                                comment.replies.push({
                                     author: r.authorText?.simpleText || '',
-                                    text: r.contentText?.runs?.map(run => run.text).join('') || '',
-                                    likeCount: r.voteCount?.simpleText || '0',
-                                    publishedTime: r.publishedTimeText?.runs?.[0]?.text || ''
+                                    text: r.contentText?.runs?.map(run => run.text).join('') || ''
                                 });
                             }
                         }
                     }
 
-                    comments.push(commentData);
+                    comments.push(comment);
                 }
             } catch (e) {
-                console.error('Failed to parse comment:', e);
+                console.error('解析评论失败:', e);
             }
         }
 
         return comments;
     }
 
-    // Helper: Fetch comments using continuation token
-    function fetchCommentsViaAPI(continuationToken) {
-        return new Promise((resolve, reject) => {
-            const url = 'https://www.youtube.com/youtubei/v1/next?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
-
-            const payload = {
-                continuation: continuationToken,
-                context: {
-                    client: {
-                        clientName: 'WEB',
-                        clientVersion: '2.20251113.00.00'
-                    }
+    // Helper: Fetch comments using native fetch (no API key needed!)
+    async function fetchCommentsViaAPI(continuationToken) {
+        const body = {
+            continuation: continuationToken,
+            context: {
+                client: {
+                    clientName: 'WEB',
+                    clientVersion: '2.20251113.00.00'
                 }
-            };
+            }
+        };
 
-            GM.xmlHttpRequest({
-                method: 'POST',
-                url: url,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                data: JSON.stringify(payload),
-                onload: function(response) {
-                    try {
-                        const data = JSON.parse(response.responseText);
-                        const items = data.onResponseReceivedEndpoints?.[0]?.reloadContinuationItemsCommand?.continuationItems ||
-                                    data.onResponseReceivedEndpoints?.[1]?.appendContinuationItemsAction?.continuationItems || [];
-
-                        const comments = parseCommentsFromAPI(items);
-
-                        // Find next token
-                        let nextToken = null;
-                        for (let item of items) {
-                            if (item.continuationItemRenderer) {
-                                nextToken = item.continuationItemRenderer.continuationEndpoint?.continuationCommand?.token;
-                                break;
-                            }
-                        }
-
-                        resolve({ comments, nextToken });
-                    } catch (e) {
-                        console.error('Failed to parse API response:', e);
-                        reject(e);
-                    }
-                },
-                onerror: function(e) {
-                    console.error('API request failed:', e);
-                    reject(e);
-                }
-            });
+        const response = await fetch('https://www.youtube.com/youtubei/v1/next?prettyPrint=false', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body)
         });
+
+        const data = await response.json();
+
+        // Extract comments and next token
+        const endpoints = data.onResponseReceivedEndpoints || [];
+        let items = [];
+        let nextToken = null;
+
+        for (let endpoint of endpoints) {
+            if (endpoint.reloadContinuationItemsCommand) {
+                items = endpoint.reloadContinuationItemsCommand.continuationItems || [];
+            }
+            if (endpoint.appendContinuationItemsAction) {
+                items = endpoint.appendContinuationItemsAction.continuationItems || [];
+            }
+        }
+
+        // Find next token
+        for (let item of items) {
+            if (item.continuationItemRenderer) {
+                nextToken = item.continuationItemRenderer.continuationEndpoint?.continuationCommand?.token;
+                break;
+            }
+        }
+
+        const comments = parseCommentsFromAPI(items);
+        return { comments, nextToken };
     }
 
     // Helper: Recursively fetch all comments
@@ -1524,10 +1492,10 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
 
                 // Delay to avoid rate limiting
                 if (token && allComments.length < maxComments) {
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             } catch (e) {
-                console.error('Error fetching comments batch:', e);
+                console.error('获取评论失败:', e);
                 break;
             }
         }
@@ -1561,45 +1529,36 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         if (!USER_CONFIG.copyCommentsButton) return;
 
         try {
-            // Wait for comments section to load
+            // Wait for comments section
             const commentsSection = await waitForElement('ytd-comments#comments', document, 10000);
             if (!commentsSection) {
-                console.log('Comments section not found');
+                console.log('[Comments] 评论区未找到');
                 return;
             }
 
-            // Try multiple selectors for comments header
-            let commentsHeader = commentsSection.querySelector('#title') ||
-                                commentsSection.querySelector('ytd-comments-header-renderer #title') ||
-                                commentsSection.querySelector('ytd-comments-header-renderer h2') ||
-                                commentsSection.querySelector('.title');
-
-            if (!commentsHeader) {
-                console.log('Comments header not found, trying count element');
-                // Fallback: find the comment count element
-                commentsHeader = commentsSection.querySelector('#count') ||
-                               commentsSection.querySelector('.count-text') ||
-                               commentsSection.querySelector('yt-formatted-string#count');
-            }
-
-            if (!commentsHeader) {
-                console.log('Could not find suitable location for comments button');
+            // Wait for header renderer
+            const headerRenderer = await waitForElement('ytd-comments-header-renderer', commentsSection, 5000);
+            if (!headerRenderer) {
+                console.log('[Comments] 评论区header未找到');
                 return;
             }
 
             // Check if button already exists
-            if (document.getElementById('copy-comments-button')) {
-                console.log('Copy comments button already exists');
+            if (document.getElementById('qiaomu-copy-comments-btn')) {
+                console.log('[Comments] 按钮已存在');
                 return;
             }
 
+            // Create button container
+            const btnContainer = document.createElement('div');
+            btnContainer.id = 'qiaomu-copy-comments-btn';
+            btnContainer.style.cssText = 'display: inline-flex; margin-left: 12px;';
+
             // Create copy button
             const copyBtn = document.createElement('button');
-            copyBtn.id = 'copy-comments-button';
             copyBtn.textContent = USER_CONFIG.fetchAllComments ? '📋 复制所有评论' : '📋 复制评论';
-            copyBtn.title = USER_CONFIG.fetchAllComments ? 'Copy all comments via API' : 'Copy visible comments';
+            copyBtn.title = USER_CONFIG.fetchAllComments ? '点击复制所有评论（通过API获取）' : '复制当前可见评论';
             copyBtn.style.cssText = `
-                margin-left: 12px;
                 padding: 6px 12px;
                 background: transparent;
                 border: 1px solid var(--yt-spec-outline);
@@ -1630,22 +1589,22 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                     const originalText = copyBtn.textContent;
 
                     if (USER_CONFIG.fetchAllComments) {
-                        // Fetch all comments via API
+                        // Fetch all comments via API (no API key needed!)
                         copyBtn.textContent = '⏳ 获取中...';
                         copyBtn.disabled = true;
 
-                        const ytInitialData = getYtInitialData();
-                        if (!ytInitialData) {
-                            showToast('无法获取页面数据', 'error');
+                        const ytData = getYtInitialData();
+                        if (!ytData) {
+                            showToast('无法获取页面数据，请刷新重试', 'error');
                             copyBtn.textContent = originalText;
                             copyBtn.disabled = false;
                             isProcessing = false;
                             return;
                         }
 
-                        const token = getContinuationToken(ytInitialData);
+                        const token = getContinuationToken(ytData);
                         if (!token) {
-                            showToast('未找到评论数据', 'error');
+                            showToast('未找到评论，请确保评论已加载', 'error');
                             copyBtn.textContent = originalText;
                             copyBtn.disabled = false;
                             isProcessing = false;
@@ -1692,11 +1651,10 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                             return;
                         }
 
-                        let allComments = [];
-                        let commentCount = 0;
+                        let allCommentsText = [];
+                        let count = 0;
 
-                        // Extract comments
-                        commentThreads.forEach((thread, index) => {
+                        commentThreads.forEach((thread) => {
                             // Main comment
                             const mainComment = thread.querySelector('#body #main #comment-content #content-text');
                             const authorElement = thread.querySelector('#body #main #header-author h3 a');
@@ -1704,11 +1662,11 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                             if (mainComment && authorElement) {
                                 const author = authorElement.textContent.trim();
                                 const text = mainComment.textContent.trim();
-                                commentCount++;
-                                allComments.push(`${commentCount}. @${author}:\n${text}\n`);
+                                count++;
+                                allCommentsText.push(`${count}. @${author}:\n${text}\n`);
                             }
 
-                            // Replies (if any)
+                            // Replies
                             const replies = thread.querySelectorAll('#replies ytd-comment-renderer');
                             replies.forEach(reply => {
                                 const replyContent = reply.querySelector('#comment-content #content-text');
@@ -1717,18 +1675,16 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                                 if (replyContent && replyAuthor) {
                                     const author = replyAuthor.textContent.trim();
                                     const text = replyContent.textContent.trim();
-                                    commentCount++;
-                                    allComments.push(`${commentCount}. @${author} (回复):\n${text}\n`);
+                                    count++;
+                                    allCommentsText.push(`${count}. @${author} (回复):\n${text}\n`);
                                 }
                             });
                         });
 
-                        const commentsText = allComments.join('\n');
-
-                        // Copy to clipboard
+                        const commentsText = allCommentsText.join('\n');
                         await navigator.clipboard.writeText(commentsText);
 
-                        copyBtn.textContent = '✓ 已复制 ' + commentCount + ' 条评论';
+                        copyBtn.textContent = `✓ 已复制 ${count} 条`;
                         copyBtn.style.color = 'var(--yt-spec-call-to-action)';
 
                         setTimeout(() => {
@@ -1737,11 +1693,11 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                             isProcessing = false;
                         }, 2000);
 
-                        showToast(`已复制 ${commentCount} 条可见评论`, 'success', 2000);
+                        showToast(`已复制 ${count} 条可见评论`, 'success', 2000);
                     }
 
                 } catch (error) {
-                    console.error('Failed to copy comments:', error);
+                    console.error('[Comments] 复制失败:', error);
                     showToast('复制失败: ' + error.message, 'error');
                     copyBtn.textContent = USER_CONFIG.fetchAllComments ? '📋 复制所有评论' : '📋 复制评论';
                     copyBtn.disabled = false;
@@ -1749,12 +1705,19 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
                 }
             });
 
-            // Insert button next to comment count
-            commentsHeader.appendChild(copyBtn);
-            console.log('Copy comments button successfully created and inserted');
+            btnContainer.appendChild(copyBtn);
+
+            // Find the right place to insert
+            const countContainer = headerRenderer.querySelector('#count')?.parentElement;
+            if (countContainer) {
+                countContainer.appendChild(btnContainer);
+                console.log('[Comments] 按钮已成功插入评论区');
+            } else {
+                console.log('[Comments] 未找到合适的插入位置');
+            }
 
         } catch (error) {
-            console.error('Failed to create copy comments button:', error);
+            console.error('[Comments] 创建按钮失败:', error);
         }
     }
 
