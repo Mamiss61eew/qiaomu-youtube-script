@@ -295,7 +295,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
         /* ===== TOAST NOTIFICATIONS ===== */
         .CentAnni-toast {
             position: fixed;
-            bottom: 30px;
+            top: 80px;
             right: 30px;
             background: rgba(28, 28, 28, 0.95);
             backdrop-filter: blur(10px);
@@ -306,7 +306,7 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
             font-size: 14px;
             color: rgba(255, 255, 255, 0.9);
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(-10px);
             pointer-events: none;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 10000;
@@ -1364,111 +1364,137 @@ A 100+ word summary **bolding** key phrases that capture the core message.`,
     async function createCopyCommentsButton() {
         if (!USER_CONFIG.copyCommentsButton) return;
 
-        // Wait for comments section to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // Wait for comments section to load
+            const commentsSection = await waitForElement('ytd-comments#comments', document, 10000);
+            if (!commentsSection) {
+                console.log('Comments section not found');
+                return;
+            }
 
-        const commentsSection = document.querySelector('ytd-comments#comments');
-        if (!commentsSection) return;
+            // Try multiple selectors for comments header
+            let commentsHeader = commentsSection.querySelector('#title') ||
+                                commentsSection.querySelector('ytd-comments-header-renderer #title') ||
+                                commentsSection.querySelector('ytd-comments-header-renderer h2') ||
+                                commentsSection.querySelector('.title');
 
-        const commentsHeader = commentsSection.querySelector('#title');
-        if (!commentsHeader) return;
+            if (!commentsHeader) {
+                console.log('Comments header not found, trying count element');
+                // Fallback: find the comment count element
+                commentsHeader = commentsSection.querySelector('#count') ||
+                               commentsSection.querySelector('.count-text') ||
+                               commentsSection.querySelector('yt-formatted-string#count');
+            }
 
-        // Check if button already exists
-        if (document.getElementById('copy-comments-button')) return;
+            if (!commentsHeader) {
+                console.log('Could not find suitable location for comments button');
+                return;
+            }
 
-        // Create copy button
-        const copyBtn = document.createElement('button');
-        copyBtn.id = 'copy-comments-button';
-        copyBtn.textContent = '📋 复制评论';
-        copyBtn.title = 'Copy all comments to clipboard';
-        copyBtn.style.cssText = `
-            margin-left: 12px;
-            padding: 6px 12px;
-            background: transparent;
-            border: 1px solid var(--yt-spec-outline);
-            border-radius: 18px;
-            color: var(--yt-spec-text-secondary);
-            font-size: 14px;
-            cursor: pointer;
-            font-family: "Roboto", "Arial", sans-serif;
-            font-weight: 500;
-            transition: all 0.2s;
-        `;
+            // Check if button already exists
+            if (document.getElementById('copy-comments-button')) {
+                console.log('Copy comments button already exists');
+                return;
+            }
 
-        copyBtn.addEventListener('mouseenter', () => {
-            copyBtn.style.background = 'var(--yt-spec-badge-chip-background)';
-        });
+            // Create copy button
+            const copyBtn = document.createElement('button');
+            copyBtn.id = 'copy-comments-button';
+            copyBtn.textContent = '📋 复制评论';
+            copyBtn.title = 'Copy all comments to clipboard';
+            copyBtn.style.cssText = `
+                margin-left: 12px;
+                padding: 6px 12px;
+                background: transparent;
+                border: 1px solid var(--yt-spec-outline);
+                border-radius: 18px;
+                color: var(--yt-spec-text-secondary);
+                font-size: 14px;
+                cursor: pointer;
+                font-family: "Roboto", "Arial", sans-serif;
+                font-weight: 500;
+                transition: all 0.2s;
+            `;
 
-        copyBtn.addEventListener('mouseleave', () => {
-            copyBtn.style.background = 'transparent';
-        });
+            copyBtn.addEventListener('mouseenter', () => {
+                copyBtn.style.background = 'var(--yt-spec-badge-chip-background)';
+            });
 
-        copyBtn.addEventListener('click', async () => {
-            try {
-                // Get all comment threads
-                const commentThreads = commentsSection.querySelectorAll('ytd-comment-thread-renderer');
+            copyBtn.addEventListener('mouseleave', () => {
+                copyBtn.style.background = 'transparent';
+            });
 
-                if (commentThreads.length === 0) {
-                    showToast('没有找到评论', 'error');
-                    return;
-                }
+            copyBtn.addEventListener('click', async () => {
+                try {
+                    // Get all comment threads
+                    const commentThreads = commentsSection.querySelectorAll('ytd-comment-thread-renderer');
 
-                let allComments = [];
-                let commentCount = 0;
-
-                // Extract comments
-                commentThreads.forEach((thread, index) => {
-                    // Main comment
-                    const mainComment = thread.querySelector('#body #main #comment-content #content-text');
-                    const authorElement = thread.querySelector('#body #main #header-author h3 a');
-
-                    if (mainComment && authorElement) {
-                        const author = authorElement.textContent.trim();
-                        const text = mainComment.textContent.trim();
-                        commentCount++;
-                        allComments.push(`${commentCount}. @${author}:\n${text}\n`);
+                    if (commentThreads.length === 0) {
+                        showToast('没有找到评论', 'error');
+                        return;
                     }
 
-                    // Replies (if any)
-                    const replies = thread.querySelectorAll('#replies ytd-comment-renderer');
-                    replies.forEach(reply => {
-                        const replyContent = reply.querySelector('#comment-content #content-text');
-                        const replyAuthor = reply.querySelector('#header-author h3 a');
+                    let allComments = [];
+                    let commentCount = 0;
 
-                        if (replyContent && replyAuthor) {
-                            const author = replyAuthor.textContent.trim();
-                            const text = replyContent.textContent.trim();
+                    // Extract comments
+                    commentThreads.forEach((thread, index) => {
+                        // Main comment
+                        const mainComment = thread.querySelector('#body #main #comment-content #content-text');
+                        const authorElement = thread.querySelector('#body #main #header-author h3 a');
+
+                        if (mainComment && authorElement) {
+                            const author = authorElement.textContent.trim();
+                            const text = mainComment.textContent.trim();
                             commentCount++;
-                            allComments.push(`${commentCount}. @${author} (回复):\n${text}\n`);
+                            allComments.push(`${commentCount}. @${author}:\n${text}\n`);
                         }
+
+                        // Replies (if any)
+                        const replies = thread.querySelectorAll('#replies ytd-comment-renderer');
+                        replies.forEach(reply => {
+                            const replyContent = reply.querySelector('#comment-content #content-text');
+                            const replyAuthor = reply.querySelector('#header-author h3 a');
+
+                            if (replyContent && replyAuthor) {
+                                const author = replyAuthor.textContent.trim();
+                                const text = replyContent.textContent.trim();
+                                commentCount++;
+                                allComments.push(`${commentCount}. @${author} (回复):\n${text}\n`);
+                            }
+                        });
                     });
-                });
 
-                const commentsText = allComments.join('\n');
+                    const commentsText = allComments.join('\n');
 
-                // Copy to clipboard
-                await navigator.clipboard.writeText(commentsText);
+                    // Copy to clipboard
+                    await navigator.clipboard.writeText(commentsText);
 
-                // Visual feedback
-                const originalText = copyBtn.textContent;
-                copyBtn.textContent = '✓ 已复制 ' + commentCount + ' 条评论';
-                copyBtn.style.color = 'var(--yt-spec-call-to-action)';
+                    // Visual feedback
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = '✓ 已复制 ' + commentCount + ' 条评论';
+                    copyBtn.style.color = 'var(--yt-spec-call-to-action)';
 
-                setTimeout(() => {
-                    copyBtn.textContent = originalText;
-                    copyBtn.style.color = 'var(--yt-spec-text-secondary)';
-                }, 2000);
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                        copyBtn.style.color = 'var(--yt-spec-text-secondary)';
+                    }, 2000);
 
-                showToast(`已复制 ${commentCount} 条评论`, 'success', 2000);
+                    showToast(`已复制 ${commentCount} 条评论`, 'success', 2000);
 
-            } catch (error) {
-                console.error('Failed to copy comments:', error);
-                showToast('复制失败', 'error');
-            }
-        });
+                } catch (error) {
+                    console.error('Failed to copy comments:', error);
+                    showToast('复制失败', 'error');
+                }
+            });
 
-        // Insert button next to comment count
-        commentsHeader.appendChild(copyBtn);
+            // Insert button next to comment count
+            commentsHeader.appendChild(copyBtn);
+            console.log('Copy comments button successfully created and inserted');
+
+        } catch (error) {
+            console.error('Failed to create copy comments button:', error);
+        }
     }
 
     function toggleTheaterMode() {
