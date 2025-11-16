@@ -199,13 +199,13 @@ copyCommentsButton: true       // 显示复制评论按钮
 ### 方法1：Tampermonkey / Violentmonkey
 
 1. 安装浏览器扩展：[Tampermonkey](https://www.tampermonkey.net/) 或 [Violentmonkey](https://violentmonkey.github.io/)
-2. 点击 [YouTubeAlchemy-Lite.js](YouTubeAlchemy-Lite.js)
+2. 点击 [qiaomu-youtube-script.js](qiaomu-youtube-script.js)
 3. 点击 "Raw" 按钮
 4. 油猴会自动检测并询问安装
 
 ### 方法2：手动安装
 
-1. 复制 `YouTubeAlchemy-Lite.js` 的内容
+1. 复制 `qiaomu-youtube-script.js` 的内容
 2. 在油猴扩展中创建新脚本
 3. 粘贴代码并保存
 
